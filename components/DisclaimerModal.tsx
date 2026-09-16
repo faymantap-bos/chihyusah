@@ -58,7 +58,7 @@ export default function DisclaimerModal({
               Peringatan Tindakan Ilegal:
             </span>
             <p className="text-[11px] text-neutral-700">
-              Jika Anda menemukan pihak atau oknum yang menjual atau mengomersialkan akses website ini, mohon segera laporkan melalui saluran komunikasi resmi di bawah ini.
+              Jika Anda menemukan pihak atau oknum yang menjual atau mengomersialkan akses website ini, mohon segera laporkan ke Developer.
             </p>
           </div>
         </div>
