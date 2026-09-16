@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
+import DisclaimerModal from '@/components/DisclaimerModal';
 import LogTerminal, { LogEntry } from '@/components/LogTerminal';
 import VerificationCard from '@/components/VerificationCard';
 import HistorySection, { VerifiedRecord } from '@/components/HistorySection';
@@ -338,6 +339,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF8] text-black flex flex-col font-sans selection:bg-amber-300 selection:text-black">
+      {/* Disclaimer Popup Modal on entry */}
+      <DisclaimerModal />
+      
       {/* Navigation & Header */}
       <Navbar />
 
