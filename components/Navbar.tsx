@@ -70,13 +70,13 @@ export default function Navbar() {
         {/* Creator Channel Links */}
         <div className="flex items-center gap-2 flex-wrap justify-center">
           <a
-            href="https://noxxyrorr.biz.id"
+            href="https://amgen.noxxyrorr.biz.id"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-400 hover:bg-emerald-300 border-2 border-black font-mono font-bold text-xs shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
           >
             <Globe className="w-3.5 h-3.5 text-black" />
-            <span>Website Tempmail</span>
+            <span>Generator Otomatis</span>
             <ExternalLink className="w-3 h-3 text-black" />
           </a>
         </div>
