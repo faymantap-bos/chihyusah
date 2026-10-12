@@ -74,7 +74,7 @@ export async function verifyMagicLink(
     subscriptionType: 'Yearly VIP License',
     orderId: premium.order || null,
     activatedAt: now.toISOString(),
-    validUntil: until.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
+    validUntil: '3 Juli 2027', //until.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
     validUntilTimestamp: until.getTime(),
     createdAt: v.user?.createdAt ? new Date(Number(v.user.createdAt)).toLocaleString('id-ID') : now.toLocaleString('id-ID'),
     lastLoginAt: v.user?.lastLoginAt ? new Date(Number(v.user.lastLoginAt)).toLocaleString('id-ID') : now.toLocaleString('id-ID'),
