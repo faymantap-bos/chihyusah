@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       subscription: premium.ok ? 'Yearly VIP License' : 'Login Only',
       orderId: premium.order || null,
       activatedAt: now.toISOString(),
-      validUntil: until.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
+      validUntil: '3 Juli 2027', //until.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
       validUntilTimestamp: until.getTime(),
       tokenType: 'Bearer',
       idToken: v.id,
