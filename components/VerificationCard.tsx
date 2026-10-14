@@ -66,7 +66,11 @@ export default function VerificationCard({
   return (
     <div className="w-full bg-white border-4 border-black shadow-[6px_6px_0px_0px_#000] p-4 sm:p-6 space-y-5">
       {/* Header Banner */}
-      <div className="bg-emerald-300 border-3 border-black p-3.5 shadow-[3px_3px_0px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div
+        className={`border-3 border-black p-3.5 shadow-[3px_3px_0px_0px_#000] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+          isPremiumActive ? 'bg-emerald-300' : 'bg-amber-200'
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black text-lime-400 border-2 border-black flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-6 h-6" />
@@ -84,7 +88,9 @@ export default function VerificationCard({
               )}
             </div>
             <h3 className="text-lg font-black tracking-tight text-black uppercase mt-0.5">
-              Akun Berhasil Diverifikasi & Premium Aktif!
+              {isPremiumActive
+                ? 'Akun Berhasil Diverifikasi & Premium Aktif!'
+                : 'Akun Berhasil Login, Premium Belum Aktif'}
             </h3>
           </div>
         </div>
@@ -157,12 +163,16 @@ export default function VerificationCard({
               <ShieldCheck className="w-3.5 h-3.5 text-black" />
               Status Akun & Paket
             </span>
-            <span className="bg-lime-400 border border-black px-1.5 py-0.5 text-[10px] font-black uppercase text-black">
-              {userObj.status || 'ACTIVE'}
+            <span
+              className={`border border-black px-1.5 py-0.5 text-[10px] font-black uppercase text-black ${
+                isPremiumActive ? 'bg-lime-400' : 'bg-rose-300'
+              }`}
+            >
+              {userObj.status || (isPremiumActive ? 'ACTIVE' : 'INACTIVE')}
             </span>
           </div>
           <p className="font-black text-black text-sm">
-            {userObj.tier || userObj.planName || 'Alight Motion Pro / Member'}
+            {userObj.tier || userObj.planName || (isPremiumActive ? 'Alight Motion Pro VIP' : 'Alight Motion Member')}
           </p>
         </div>
 
@@ -184,7 +194,7 @@ export default function VerificationCard({
             )}
           </div>
           <p className="font-mono text-xs font-bold text-black break-all">
-            {userObj.orderId || 'nox-verified'}
+            {userObj.orderId || 'Tidak tersedia'}
           </p>
         </div>
 
@@ -195,10 +205,12 @@ export default function VerificationCard({
               <Calendar className="w-3.5 h-3.5 text-black" />
               Masa Berlaku VIP
             </span>
-            <span className="text-[10px] font-bold text-neutral-700">1 Tahun</span>
+            <span className="text-[10px] font-bold text-neutral-700">
+              {isPremiumActive ? '1 Tahun' : 'Tidak aktif'}
+            </span>
           </div>
           <p className="font-bold text-black text-sm">
-            {userObj.validUntil || '1 Tahun (Yearly VIP License)'}
+            {userObj.validUntil || 'Tidak tersedia'}
           </p>
         </div>
 
@@ -219,8 +231,8 @@ export default function VerificationCard({
               </button>
             )}
           </div>
-          <p className="font-mono text-xs text-neutral-800 truncate" title={cookie || 'Bearer Token Verified'}>
-            {cookie ? `${cookie.slice(0, 24)}...` : 'Bearer Token Verified'}
+          <p className="font-mono text-xs text-neutral-800 truncate" title={cookie || 'Tidak tersedia'}>
+            {cookie ? `${cookie.slice(0, 24)}...` : 'Tidak tersedia'}
           </p>
         </div>
       </div>
