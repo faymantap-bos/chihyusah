@@ -51,12 +51,20 @@ export async function verifyMagicLink(
     throw new Error(friendlyFirebaseError(v.why));
   }
 
+  const sessionCookie = cookie?.trim() || (await fetchSessionCookie());
   const premium = await pro(v.id || '');
-  const stats = premium.ok ? incrementStats() : getStats();
+  let stats = { total: 0, today: 0 };
+  let statsWarning: string | null = null;
+
+  try {
+    stats = premium.ok ? await incrementStats() : await getStats();
+  } catch {
+    statsWarning = 'Statistik sementara tidak tersedia';
+  }
 
   const now = new Date();
-  const until = new Date();
-  until.setFullYear(until.getFullYear() + 1);
+  const premiumExpiry = new Date('2027-07-03T23:59:59.999+07:00');
+  const validUntil = premium.ok ? '3 Juli 2027' : null;
 
   const formattedUserData = {
     uid: v.uid || v.user?.localId || '-',
@@ -70,19 +78,20 @@ export async function verifyMagicLink(
     membershipStatus: premium.ok ? 'PREMIUM_ACTIVE' : 'LOGIN_ONLY',
     tier: premium.ok ? 'Alight Motion Pro VIP' : 'Alight Motion Member',
     subscription: premium.ok ? 'Yearly VIP License' : 'Login Only',
-    planName: 'Alight Motion Pro / Member',
-    subscriptionType: 'Yearly VIP License',
+    planName: premium.ok ? 'Alight Motion Pro VIP' : 'Alight Motion Member',
+    subscriptionType: premium.ok ? 'Yearly VIP License' : null,
     orderId: premium.order || null,
-    activatedAt: now.toISOString(),
-    validUntil: '3 Juli 2027', //until.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
-    validUntilTimestamp: until.getTime(),
+    activatedAt: premium.ok ? now.toISOString() : null,
+    validUntil,
+    validUntilTimestamp: premium.ok ? premiumExpiry.getTime() : null,
     createdAt: v.user?.createdAt ? new Date(Number(v.user.createdAt)).toLocaleString('id-ID') : now.toLocaleString('id-ID'),
     lastLoginAt: v.user?.lastLoginAt ? new Date(Number(v.user.lastLoginAt)).toLocaleString('id-ID') : now.toLocaleString('id-ID'),
     tokenType: 'Bearer',
     idToken: v.id,
     refreshToken: v.ref,
-    cookie: cookie || '',
+    cookie: sessionCookie,
     stats,
+    statsWarning,
   };
 
   return {
@@ -93,6 +102,7 @@ export async function verifyMagicLink(
       premium,
       profile: v.user,
       stats,
+      statsWarning,
     },
   };
 }
