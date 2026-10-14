@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const email = body.email;
     const rawLink = body.link || body.magicLink;
-    const cookie = body.cookie;
+    const cookie = typeof body.cookie === 'string' ? body.cookie.trim() : '';
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json(
@@ -24,23 +24,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await verifyMagicLink(email.trim(), rawLink.trim(), cookie?.trim());
+    const result = await verifyMagicLink(email.trim(), rawLink.trim(), cookie);
+    const premiumActive = result.userData.status === 'ACTIVE';
 
     return NextResponse.json({
-      ok: true,
-      success: true,
+      ok: premiumActive,
+      success: premiumActive,
+      authenticated: true,
+      premiumActive,
       userData: result.userData,
       data: result.userData,
       raw: result.raw,
-      message: result.userData.status === 'ACTIVE' 
-        ? 'Verifikasi akun berhasil, Alight Motion Premium VIP aktif!' 
-        : 'Verifikasi akun berhasil!',
+      message: premiumActive
+        ? `Verifikasi akun berhasil, Alight Motion Premium VIP aktif sampai ${result.userData.validUntil}.`
+        : 'Login berhasil, tetapi aktivasi Premium tidak berhasil.',
     });
   } catch (error: any) {
     return NextResponse.json(
       {
         ok: false,
         success: false,
+        authenticated: false,
+        premiumActive: false,
         error: error.message || 'Gagal memverifikasi magic link',
         message: error.message || 'Gagal memverifikasi magic link',
       },
