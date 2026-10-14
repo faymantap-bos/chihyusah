@@ -170,7 +170,52 @@ export async function pro(id: string): Promise<{ ok: boolean; order?: string; r?
 
   try {
     const r = await axios.post(vfy, b, { headers: sp(h), timeout: 20000 });
-    return { ok: true, order: o, r: r.data };
+    const envelope = r.data;
+
+    // Firebase callable functions can return an error payload with HTTP 200.
+    // Do not treat transport success alone as proof that Premium is active.
+    if (!envelope || typeof envelope !== 'object' || envelope.error) {
+      return {
+        ok: false,
+        why: envelope?.error?.message || 'Server aktivasi tidak mengembalikan hasil yang valid.',
+        r: envelope,
+      };
+    }
+
+    const result = envelope.result ?? envelope.data;
+    const status =
+      result && typeof result === 'object' && typeof result.status === 'string'
+        ? result.status.toUpperCase()
+        : '';
+    const textResult = typeof result === 'string' ? result.toUpperCase() : '';
+    const confirmed =
+      result === true ||
+      (result &&
+        typeof result === 'object' &&
+        (result.success === true ||
+          result.ok === true ||
+          result.active === true ||
+          result.premium === true ||
+          status === 'ACTIVE' ||
+          status === 'SUCCESS' ||
+          status === 'OK' ||
+          status === 'SUBSCRIPTION_STATE_ACTIVE')) ||
+      /SUCCESS|ACTIVE|VERIFIED/.test(textResult);
+
+    if (!confirmed) {
+      return {
+        ok: false,
+        why: 'Server aktivasi tidak mengonfirmasi bahwa Premium aktif.',
+        r: envelope,
+      };
+    }
+
+    const confirmedOrder =
+      result && typeof result === 'object'
+        ? result.orderId || result.order || result.purchase?.orderId
+        : undefined;
+
+    return { ok: true, order: confirmedOrder, r: envelope };
   } catch (e: any) {
     return { ok: false, why: bad(e) };
   }
