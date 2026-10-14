@@ -215,7 +215,7 @@ export async function pro(id: string): Promise<{ ok: boolean; order?: string; r?
         ? result.orderId || result.order || result.purchase?.orderId
         : undefined;
 
-    return { ok: true, order: confirmedOrder, r: envelope };
+    return { ok: true, order: confirmedOrder || o, r: envelope };
   } catch (e: any) {
     return { ok: false, why: bad(e) };
   }
