@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { link } from '@/lib/auth';
-import { friendlyFirebaseError } from '@/lib/errors';
+import { sendVerificationLink } from '@/lib/am';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const { email } = body;
+    const cookie = typeof body.cookie === 'string' ? body.cookie : undefined;
 
     if (!email || typeof email !== 'string' || !email.includes('@') || !email.includes('.')) {
       return NextResponse.json(
@@ -17,23 +17,13 @@ export async function POST(req: NextRequest) {
     }
 
     const em = email.trim().toLowerCase();
-    const r = await link(em);
-
-    if (!r.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: friendlyFirebaseError(r.why),
-          code: r.why,
-        },
-        { status: 400 }
-      );
-    }
+    const result = await sendVerificationLink(em, cookie);
 
     return NextResponse.json({
       success: true,
       email: em,
-      message: `Link dikirim ke ${em}. Cek inbox atau folder spam email Anda.`,
+      cookie: result.cookie,
+      message: result.message,
     });
   } catch (error: any) {
     return NextResponse.json(
