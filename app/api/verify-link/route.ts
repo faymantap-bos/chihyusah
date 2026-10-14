@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, pro } from '@/lib/auth';
-import { friendlyFirebaseError } from '@/lib/errors';
-import { getStats, incrementStats } from '@/lib/stats';
+import { verifyMagicLink } from '@/lib/am';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const email = body.email;
     const rawLink = body.magicLink || body.link;
+    const cookie = typeof body.cookie === 'string' ? body.cookie.trim() : '';
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json(
@@ -26,86 +25,32 @@ export async function POST(req: NextRequest) {
     }
 
     const em = email.trim().toLowerCase();
-    const v = await auth(em, rawLink.trim());
-
-    if (!v.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: friendlyFirebaseError(v.why),
-          code: v.why,
-        },
-        { status: 400 }
-      );
-    }
-
-    const uid = v.uid || v.user?.localId || '-';
-    const premium = await pro(v.id || '');
-    let stats;
-
-    if (premium.ok) {
-      stats = await incrementStats();
-    } else {
-      stats = await getStats();
-    }
-
-    const now = new Date();
-    const until = new Date();
-    until.setFullYear(until.getFullYear() + 1);
-
-    const formattedData = {
-      stats: stats,
-      uid: uid,
-      id: uid,
-      email: v.user?.email || em,
-      emailVerified: v.user?.emailVerified ?? true,
-      displayName: v.user?.displayName || null,
-      photoUrl: v.user?.photoUrl || null,
-      createdAt: v.user?.createdAt ? new Date(Number(v.user.createdAt)).toISOString() : null,
-      lastLoginAt: v.user?.lastLoginAt
-        ? new Date(Number(v.user.lastLoginAt)).toISOString()
-        : now.toISOString(),
-      isNewUser: Boolean(v.baru),
-      status: premium.ok ? 'ACTIVE' : 'INACTIVE',
-      membershipStatus: premium.ok ? 'PREMIUM_ACTIVE' : 'LOGIN_ONLY',
-      tier: premium.ok ? 'Alight Motion Pro VIP' : 'Alight Motion Member',
-      planName: 'Alight Motion Pro / Member',
-      subscriptionType: 'Yearly VIP License',
-      subscription: premium.ok ? 'Yearly VIP License' : 'Login Only',
-      orderId: premium.order || null,
-      activatedAt: now.toISOString(),
-      validUntil: '3 Juli 2027', //until.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }),
-      validUntilTimestamp: until.getTime(),
-      tokenType: 'Bearer',
-      idToken: v.id,
-      refreshToken: v.ref,
-      premiumResponse: premium.ok ? premium.r : null,
-      premiumError: premium.ok ? null : premium.why,
-      profile: v.user || null,
-    };
+    const result = await verifyMagicLink(em, rawLink.trim(), cookie);
+    const premiumActive = result.userData.status === 'ACTIVE';
+    const statsWarning = result.userData.statsWarning;
 
     return NextResponse.json({
-      success: true,
-      ok: true,
-      message: premium.ok
-        ? 'Verifikasi berhasil, Alight Motion Premium VIP aktif 1 Tahun!'
-        : 'Login berhasil, namun aktivasi premium mengalami kendala.',
-      data: formattedData,
-      userData: formattedData, // backward compatibility
-      raw: {
-        auth: v,
-        premium,
-        stats,
-      },
+      success: premiumActive,
+      ok: premiumActive,
+      authenticated: true,
+      premiumActive,
+      message: premiumActive
+        ? `Verifikasi berhasil, Alight Motion Premium VIP aktif sampai ${result.userData.validUntil}.${statsWarning ? ' Statistik sementara tidak tersedia.' : ''}`
+        : 'Login berhasil, tetapi aktivasi Premium tidak berhasil.',
+      data: result.userData,
+      userData: result.userData,
+      raw: result.raw,
     });
   } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         ok: false,
+        authenticated: false,
+        premiumActive: false,
         message: error.message || 'Terjadi kesalahan saat memverifikasi link.',
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
