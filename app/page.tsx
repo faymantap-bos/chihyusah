@@ -67,20 +67,8 @@ export default function Home() {
   // Activity logs
   const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
 
-  // History records with safe lazy client initial state
-  const [history, setHistory] = useState<VerifiedRecord[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('am_verified_history');
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      } catch {
-        // Ignore local storage error
-      }
-    }
-    return [];
-  });
+  // Start identically on server and client to avoid a hydration mismatch.
+  const [history, setHistory] = useState<VerifiedRecord[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Fetch stats on load and after verification
@@ -100,6 +88,18 @@ export default function Home() {
   };
 
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem('am_verified_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setHistory(parsed);
+        }
+      }
+    } catch {
+      // Ignore invalid or unavailable local storage data.
+    }
+
     let isMounted = true;
     fetch('/api/stats')
       .then((res) => (res.ok ? res.json() : null))
@@ -165,7 +165,10 @@ export default function Home() {
       const res = await fetch('/api/send-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail }),
+        body: JSON.stringify({
+          email: targetEmail,
+          cookie: cookie.trim() || undefined,
+        }),
       });
 
       const rawText = await res.text();
@@ -178,6 +181,10 @@ export default function Home() {
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || `Gagal mengirim link verifikasi (${data.code || res.status})`);
+      }
+
+      if (typeof data.cookie === 'string') {
+        setCookie(data.cookie);
       }
 
       addLog(`✅ Link verifikasi berhasil dikirim ke: ${targetEmail}`, 'success');
@@ -227,6 +234,7 @@ export default function Home() {
         body: JSON.stringify({
           email: targetEmail,
           magicLink: rawMagicLink,
+          cookie: cookie.trim() || undefined,
         }),
       });
 
@@ -238,39 +246,54 @@ export default function Home() {
         throw new Error(`Respons server tidak valid (HTTP ${res.status}).`);
       }
 
-      if (!res.ok || !data.success) {
+      if (!res.ok || (!data.success && !data.authenticated)) {
         throw new Error(data.message || `Verifikasi gagal (${data.code || res.status})`);
       }
 
       const verifiedUser = data.data || data.userData;
+      const premiumActive =
+        data.premiumActive === true ||
+        verifiedUser?.status === 'ACTIVE' ||
+        verifiedUser?.membershipStatus === 'PREMIUM_ACTIVE';
 
       addLog(`✅ VERIFIKASI BERHASIL! UID: ${verifiedUser.uid}`, 'success');
-      if (verifiedUser.orderId) {
+      if (premiumActive && verifiedUser.orderId) {
         addLog(`⭐ ALIGHT MOTION PRO VIP AKTIF: Order ${verifiedUser.orderId}`, 'success');
+      } else if (!premiumActive) {
+        addLog('⚠️ Login berhasil, tetapi Premium tidak aktif.', 'warn');
       }
-      addLog(`📅 Masa berlaku: ${verifiedUser.validUntil || '1 Tahun'}`, 'info');
+      if (premiumActive && verifiedUser.validUntil) {
+        addLog(`📅 Masa berlaku: ${verifiedUser.validUntil}`, 'info');
+      }
+      if (verifiedUser.statsWarning) {
+        addLog('⚠️ Verifikasi berhasil, tetapi statistik sementara tidak tersedia.', 'warn');
+      }
 
       setVerificationResult({
         userData: verifiedUser,
         raw: data,
       });
 
-      if (data.data?.stats) {
+      if (data.data?.stats && !data.data?.statsWarning) {
         setStats(data.data.stats);
       } else {
         refreshStats();
       }
 
       setStatusMessage({
-        type: 'success',
-        text: data.message || 'Akun Alight Motion berhasil diverifikasi dan Premium aktif!',
+        type: premiumActive ? 'success' : 'info',
+        text:
+          data.message ||
+          (premiumActive
+            ? 'Akun Alight Motion berhasil diverifikasi dan Premium aktif!'
+            : 'Login berhasil, tetapi aktivasi Premium tidak berhasil.'),
       });
 
       // Simpan ke riwayat akun terverifikasi
       const newRecord: VerifiedRecord = {
         id: `rec-${Date.now()}`,
         email: targetEmail,
-        cookie: cookie.trim() || verifiedUser.orderId || 'verified_token',
+        cookie: verifiedUser.cookie || cookie.trim(),
         timestamp: new Date().toLocaleString('id-ID'),
         userData: verifiedUser,
         raw: data,
@@ -331,6 +354,7 @@ export default function Home() {
 
   const resetFlow = () => {
     setStep(1);
+    setCookie('');
     setMagicLink('');
     setVerificationResult(null);
     setStatusMessage({ type: null, text: '' });
@@ -695,7 +719,7 @@ export default function Home() {
                 email={email}
                 userData={verificationResult.userData}
                 raw={verificationResult.raw}
-                cookie={cookie || verificationResult.userData?.orderId || ''}
+                cookie={verificationResult.userData?.cookie || cookie}
               />
 
               <div className="flex flex-col sm:flex-row gap-3">
