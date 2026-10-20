@@ -63,8 +63,8 @@ export async function verifyMagicLink(
   }
 
   const now = new Date();
-  const premiumExpiry = new Date('2027-07-03T23:59:59.999+07:00');
-  const validUntil = premium.ok ? '3 Juli 2027' : null;
+  const premiumExpiry = new Date('2027-09-01T23:59:59.999+07:00');
+  const validUntil = premium.ok ? '1 September 2027' : null;
 
   const formattedUserData = {
     uid: v.uid || v.user?.localId || '-',
